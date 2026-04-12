@@ -7,7 +7,7 @@ AI-powered grocery delivery platform demonstrating enterprise-grade engineering 
 ```
                       Cloudflare DNS
                            |
-                 Nginx Proxy Manager (SSL)
+                 Nginx + Let's Encrypt SSL
                   /        |          \
           Next.js 16    .NET 8 API   FastAPI
           (TypeScript)  (C#)         (Python RAG)
@@ -16,11 +16,12 @@ AI-powered grocery delivery platform demonstrating enterprise-grade engineering 
              \     PostgreSQL:5436    /
               \     Redis:6380      /
                \        |         /
-                +-- Qdrant:6333 --+
-                +-- Ollama:11434 -+
-                      |
-              Azure Functions (.NET 8)
-              (Deal Rotation + Embeddings)
+                +-- Qdrant:6333 --+     ← Vector search (3,674 vectors)
+                +-- Ollama:11434 -+     ← Embeddings (nomic-embed-text)
+                        |
+                 Azure OpenAI (gpt-4o)  ← LLM generation (~1.4s/query)
+                 Azure App Insights     ← Telemetry
+                 Azure Blob Storage     ← Product images + queues
 ```
 
 ## Features
@@ -28,24 +29,34 @@ AI-powered grocery delivery platform demonstrating enterprise-grade engineering 
 - **3,300+ products** across 6 categories (Baby, Beverages, Household, Fresh, Meat & Seafood, Deli)
 - **365 deals** — BOGO (200), Weekly (150), Daily (15 rotating)
 - **9 store locations** in the Lakeland, FL area
-- **AI chatbot** with RAG-powered product search, deal recommendations, and store info
+- **AI chatbot** powered by Azure OpenAI gpt-4o with RAG (~1.4s response time)
 - **13 frontend pages** — product catalog, deals, store locator, cart, checkout, AI chat
-- **Full observability** — OpenTelemetry + Application Insights + Prometheus + Grafana
+- **Full observability** — OpenTelemetry + Azure Application Insights + Prometheus
+
+## Azure Resources (Live)
+
+| Resource | Type | Purpose |
+|---|---|---|
+| `grocery-openai` | Azure OpenAI (S0) | gpt-4o chat + text-embedding-ada-002 |
+| `grocerystorage2026` | Storage Account | Blob containers (product/category images) + Queues |
+| `grocery-logs` | Log Analytics Workspace | Centralized logging (30-day retention) |
+| `grocery-insights` | Application Insights | APM telemetry from .NET API |
 
 ## Tech Stack (21 technologies)
 
 | Layer | Technology |
 |-------|-----------|
 | API | C# / .NET 8 / ASP.NET Core / Entity Framework Core / Dapper |
-| AI Service | Python / FastAPI / Qdrant / Ollama / Azure OpenAI |
+| AI Service | Python / FastAPI / Qdrant / Azure OpenAI (gpt-4o) |
 | Frontend | TypeScript / Next.js 16 / React 19 / Tailwind CSS v4 |
 | Functions | Azure Functions (.NET 8 Isolated Worker) / Azurite |
-| Database | PostgreSQL (local) / Azure SQL Database (prod) |
+| Database | PostgreSQL (VPS) / Azure SQL Database (Terraform) |
 | Cache | Redis (cart sessions + chat history) |
 | Data Pipeline | PySpark / Databricks notebooks |
+| Cloud | Azure OpenAI / App Insights / Blob Storage / Log Analytics |
 | IaC | Terraform (8 Azure modules) |
 | CI/CD | GitHub Actions + Azure DevOps |
-| Observability | OpenTelemetry / Application Insights / Prometheus / Grafana |
+| Observability | OpenTelemetry / Azure Application Insights / Prometheus |
 | MLOps | RAG evaluation framework (quality, regression, latency) |
 
 ## Project Structure
@@ -80,18 +91,21 @@ python data-pipeline/generate_products.py
 python data-pipeline/generate_deals.py
 python data-pipeline/seed_database.py
 
-# Start API
-cd src/GroceryShop.Api && dotnet run
+# Index products into Qdrant
+python data-pipeline/index_vectors.py
 
-# Start AI service
-cd ai-service && uvicorn app.main:app --port 8021
+# Start all services
+docker compose up -d
 
-# Start frontend
-cd web && npm run dev
+# Verify
+curl http://localhost:8020/health          # API
+curl http://localhost:8021/health          # AI Service
+curl http://localhost:3002                 # Frontend
 ```
 
 ## Live
 
 - **App**: https://aideliverygroceryshop.cloudaura.cloud
 - **Plan**: https://cloudaura.cloud/ai-delivery-grocery-shop-plan.html
+- **Explainer**: https://cloudaura.cloud/ai-delivery-grocery-shop-ultra-plan.html
 - **Repo**: https://github.com/CloudAuraOfficial/ai-delivery-grocery-shop
