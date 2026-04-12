@@ -6,6 +6,7 @@ from fastapi.responses import StreamingResponse
 
 from app.models.schemas import ChatRequest, ChatResponse, ProductReference, ChatHistoryResponse, ChatHistoryItem
 from app.services import retriever, generator, chat_service
+from app.services.custom_responses import check_custom_scenario
 
 logger = structlog.get_logger()
 
@@ -17,6 +18,20 @@ async def chat_message(request: ChatRequest):
     """Send a message and get an AI response with product recommendations."""
     # Get or create session
     session_id = await chat_service.get_or_create_session(request.session_id)
+
+    # Check custom scenarios first (order tracking, off-topic, complaints, etc.)
+    custom = check_custom_scenario(request.message)
+    if custom and custom["skip_rag"]:
+        logger.info("chat_custom_response", session=session_id[:8], scenario="custom_skip_rag")
+        await chat_service.append_message(session_id, "user", request.message)
+        await chat_service.append_message(session_id, "assistant", custom["message"])
+        return ChatResponse(
+            message=custom["message"],
+            session_id=session_id,
+            products=[],
+            latency_ms=0,
+            model="custom",
+        )
 
     # Get conversation history
     history = await chat_service.get_history(session_id)
@@ -39,11 +54,20 @@ async def chat_message(request: ChatRequest):
         products = await retriever.retrieve_products(request.message, top_k=10)
         deals = await retriever.retrieve_deals(request.message, top_k=3)
 
-    # Build context and generate response
-    context = generator.build_context(products, deals, stores)
-    response_text, latency_ms, model = await generator.generate(
-        request.message, context, history
-    )
+    # If custom scenario exists but wants RAG results too (e.g., brand not carried → show alternatives)
+    if custom and not custom["skip_rag"]:
+        # Prepend custom message, then let RAG add product context
+        context = generator.build_context(products, deals, stores)
+        rag_response, latency_ms, model = await generator.generate(
+            request.message, context, history
+        )
+        response_text = custom["message"] + "\n\n" + rag_response
+    else:
+        # Standard RAG flow
+        context = generator.build_context(products, deals, stores)
+        response_text, latency_ms, model = await generator.generate(
+            request.message, context, history
+        )
 
     # Save to session history
     await chat_service.append_message(session_id, "user", request.message)
@@ -70,7 +94,7 @@ async def chat_message(request: ChatRequest):
         message=response_text,
         session_id=session_id,
         products=product_refs,
-        latency_ms=round(latency_ms, 1),
+        latency_ms=round(latency_ms, 1) if latency_ms else 0,
         model=model,
     )
 

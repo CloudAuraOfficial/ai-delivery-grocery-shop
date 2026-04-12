@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { sendChatMessage } from "@/lib/api";
 import { formatPrice } from "@/lib/utils";
 import type { ChatMessage, ProductReference } from "@/lib/types";
@@ -96,16 +97,24 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* Product references */}
+        {/* Product references — clickable */}
         {products.length > 0 && messages.length > 0 && !loading && (
-          <div className="flex flex-wrap gap-2">
-            {products.map((p) => (
-              <div key={p.sku} className="text-xs bg-white border border-border rounded-lg px-3 py-2 flex items-center gap-2">
-                <span className="font-medium">{p.name}</span>
-                <span className="text-primary font-bold">{formatPrice(p.price)}</span>
-                {p.dealType && <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px]">{p.dealType}</span>}
-              </div>
-            ))}
+          <div>
+            <div className="text-xs text-muted mb-2 font-medium">Related products:</div>
+            <div className="flex flex-wrap gap-2">
+              {products.map((p) => (
+                <Link
+                  key={p.sku}
+                  href={`/products?q=${encodeURIComponent(p.name)}`}
+                  className="text-xs bg-white border border-border rounded-lg px-3 py-2.5 flex items-center gap-2 hover:border-primary hover:shadow-md transition-all group cursor-pointer"
+                >
+                  <span className="font-medium group-hover:text-primary transition-colors">{p.name}</span>
+                  <span className="text-primary font-bold">{formatPrice(p.price)}</span>
+                  {p.dealType && <span className="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-[10px]">{p.dealType}</span>}
+                  <span className="text-muted group-hover:text-primary transition-colors">→</span>
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 
