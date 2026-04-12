@@ -5,6 +5,7 @@ COPY GroceryShop.sln ./
 COPY src/GroceryShop.Core/GroceryShop.Core.csproj src/GroceryShop.Core/
 COPY src/GroceryShop.Infrastructure/GroceryShop.Infrastructure.csproj src/GroceryShop.Infrastructure/
 COPY src/GroceryShop.Api/GroceryShop.Api.csproj src/GroceryShop.Api/
+COPY src/GroceryShop.Functions/GroceryShop.Functions.csproj src/GroceryShop.Functions/
 RUN dotnet restore
 
 COPY src/ src/
