@@ -1,0 +1,98 @@
+[
+  {
+    "name": "Baby",
+    "slug": "baby",
+    "subcategories": [
+      { "name": "Diapers & Wipes", "brands": ["Pampers", "Huggies", "Luvs", "GreenWise", "Honest Co"], "priceRange": [5.99, 34.99] },
+      { "name": "Baby Formula", "brands": ["Enfamil", "Similac", "Gerber Good Start", "Earth's Best", "GreenWise"], "priceRange": [12.99, 42.99] },
+      { "name": "Baby Food", "brands": ["Gerber", "Beech-Nut", "Happy Baby", "Earth's Best", "Plum Organics"], "priceRange": [1.29, 8.99] },
+      { "name": "Baby Cereal & Snacks", "brands": ["Gerber", "Happy Baby", "Earth's Best", "Plum Organics", "GreenWise"], "priceRange": [2.49, 6.99] },
+      { "name": "Bottles & Feeding", "brands": ["Dr. Brown's", "Philips Avent", "MAM", "NUK", "Tommee Tippee"], "priceRange": [4.99, 29.99] },
+      { "name": "Baby Care", "brands": ["Johnson's", "Aveeno Baby", "Cetaphil Baby", "Aquaphor", "Burt's Bees Baby"], "priceRange": [3.99, 14.99] },
+      { "name": "Pacifiers & Teethers", "brands": ["MAM", "NUK", "Philips Avent", "Dr. Brown's", "Nuby"], "priceRange": [3.49, 12.99] },
+      { "name": "Baby Laundry", "brands": ["Dreft", "All Free Clear", "Seventh Generation", "ECOS", "GreenWise"], "priceRange": [7.99, 15.99] },
+      { "name": "Nursery Essentials", "brands": ["Safety 1st", "Munchkin", "Skip Hop", "Summer Infant", "Burt's Bees Baby"], "priceRange": [5.99, 24.99] },
+      { "name": "Baby Bath", "brands": ["Johnson's", "Aveeno Baby", "Mustela", "CeraVe Baby", "Honest Co"], "priceRange": [4.99, 16.99] }
+    ]
+  },
+  {
+    "name": "Beverages",
+    "slug": "beverages",
+    "subcategories": [
+      { "name": "Water", "brands": ["Dasani", "Aquafina", "Poland Spring", "Fiji", "GreenWise"], "priceRange": [0.99, 8.99] },
+      { "name": "Soda & Pop", "brands": ["Coca-Cola", "Pepsi", "Dr Pepper", "Sprite", "Mountain Dew"], "priceRange": [1.79, 8.49] },
+      { "name": "Juice", "brands": ["Tropicana", "Simply", "Minute Maid", "Ocean Spray", "V8"], "priceRange": [2.49, 7.99] },
+      { "name": "Coffee", "brands": ["Starbucks", "Folgers", "Dunkin'", "Lavazza", "GreenWise"], "priceRange": [5.99, 16.99] },
+      { "name": "Tea", "brands": ["Lipton", "Tazo", "Celestial Seasonings", "Twinings", "Pure Leaf"], "priceRange": [2.99, 8.99] },
+      { "name": "Energy Drinks", "brands": ["Red Bull", "Monster", "Celsius", "Bang", "Reign"], "priceRange": [2.49, 29.99] },
+      { "name": "Sports Drinks", "brands": ["Gatorade", "Powerade", "BODYARMOR", "Propel", "Liquid IV"], "priceRange": [1.49, 14.99] },
+      { "name": "Sparkling Water", "brands": ["LaCroix", "Perrier", "Topo Chico", "Spindrift", "Bubly"], "priceRange": [3.99, 7.99] },
+      { "name": "Milk Alternatives", "brands": ["Oatly", "Silk", "Almond Breeze", "Califia Farms", "GreenWise"], "priceRange": [3.49, 6.99] },
+      { "name": "Cocktail Mixers", "brands": ["Q Mixers", "Fever-Tree", "Canada Dry", "Schweppes", "Stirrings"], "priceRange": [2.99, 9.99] }
+    ]
+  },
+  {
+    "name": "Household",
+    "slug": "household",
+    "subcategories": [
+      { "name": "Cleaning Supplies", "brands": ["Clorox", "Lysol", "Mr. Clean", "Pine-Sol", "GreenWise"], "priceRange": [2.99, 12.99] },
+      { "name": "Paper Products", "brands": ["Bounty", "Scott", "Charmin", "Cottonelle", "GreenWise"], "priceRange": [4.99, 24.99] },
+      { "name": "Laundry", "brands": ["Tide", "Gain", "All", "Persil", "Seventh Generation"], "priceRange": [6.99, 21.99] },
+      { "name": "Dish Soap", "brands": ["Dawn", "Palmolive", "Cascade", "Finish", "Mrs. Meyer's"], "priceRange": [2.49, 14.99] },
+      { "name": "Trash Bags", "brands": ["Glad", "Hefty", "GreenWise", "Kirkland", "Simple Human"], "priceRange": [5.99, 18.99] },
+      { "name": "Air Fresheners", "brands": ["Febreze", "Glade", "Air Wick", "Renuzit", "Mrs. Meyer's"], "priceRange": [2.99, 12.99] },
+      { "name": "Pest Control", "brands": ["Raid", "Hot Shot", "Ortho", "Terro", "Black Flag"], "priceRange": [3.99, 16.99] },
+      { "name": "Batteries", "brands": ["Duracell", "Energizer", "Rayovac", "AmazonBasics", "Panasonic"], "priceRange": [4.99, 19.99] },
+      { "name": "Food Storage", "brands": ["Ziploc", "Glad", "Reynolds", "Saran", "Bee's Wrap"], "priceRange": [2.99, 9.99] },
+      { "name": "Light Bulbs", "brands": ["GE", "Philips", "Sylvania", "Feit Electric", "EcoSmart"], "priceRange": [3.99, 14.99] }
+    ]
+  },
+  {
+    "name": "Fresh",
+    "slug": "fresh",
+    "subcategories": [
+      { "name": "Fruits", "brands": ["Dole", "Driscoll's", "Del Monte", "Sunkist", "GreenWise"], "priceRange": [0.59, 7.99] },
+      { "name": "Vegetables", "brands": ["GreenWise", "Earthbound Farm", "Cal-Organic", "Bolthouse", "Taylor Farms"], "priceRange": [0.79, 5.99] },
+      { "name": "Herbs", "brands": ["GreenWise", "Shenandoah Growers", "North Shore Living", "Gotham Greens", "Herb Pharm"], "priceRange": [1.99, 4.99] },
+      { "name": "Salads & Greens", "brands": ["Taylor Farms", "Dole", "Fresh Express", "Earthbound Farm", "GreenWise"], "priceRange": [2.99, 6.99] },
+      { "name": "Fresh Pasta", "brands": ["Buitoni", "Rana", "GreenWise", "Barilla Fresh", "Rising Moon"], "priceRange": [3.49, 7.99] },
+      { "name": "Fresh Juice & Smoothies", "brands": ["Suja", "Evolution Fresh", "Naked", "Tropicana", "GreenWise"], "priceRange": [2.99, 8.99] },
+      { "name": "Organic Produce", "brands": ["GreenWise", "Earthbound Farm", "Cal-Organic", "Organic Girl", "Nature's Promise"], "priceRange": [1.49, 8.99] },
+      { "name": "Mushrooms", "brands": ["GreenWise", "Monterey", "Phillips", "Giorgio", "Whole Earth"], "priceRange": [1.99, 6.99] },
+      { "name": "Berries", "brands": ["Driscoll's", "GreenWise", "Wish Farms", "California Giant", "Nature's Promise"], "priceRange": [2.99, 8.99] },
+      { "name": "Tropical Fruits", "brands": ["Dole", "Del Monte", "Chiquita", "GreenWise", "Melissa's"], "priceRange": [0.99, 6.99] }
+    ]
+  },
+  {
+    "name": "Meat & Seafood",
+    "slug": "meat-seafood",
+    "subcategories": [
+      { "name": "Beef", "brands": ["GreenWise", "Certified Angus Beef", "Laura's Lean", "Organic Prairie", "Niman Ranch"], "priceRange": [5.99, 24.99] },
+      { "name": "Chicken", "brands": ["Tyson", "Perdue", "GreenWise", "Bell & Evans", "Foster Farms"], "priceRange": [3.99, 14.99] },
+      { "name": "Pork", "brands": ["Smithfield", "GreenWise", "Niman Ranch", "Hormel", "Farmland"], "priceRange": [3.99, 16.99] },
+      { "name": "Turkey", "brands": ["Butterball", "Jennie-O", "GreenWise", "Shady Brook Farms", "Diestel"], "priceRange": [4.99, 22.99] },
+      { "name": "Fish", "brands": ["GreenWise", "High Liner", "Gorton's", "SeaPak", "Trident"], "priceRange": [5.99, 19.99] },
+      { "name": "Shrimp", "brands": ["GreenWise", "SeaPak", "Aqua Star", "National Fish", "Censea"], "priceRange": [6.99, 18.99] },
+      { "name": "Crab & Lobster", "brands": ["Phillips", "GreenWise", "Bumblebee", "National Fish", "Maine Lobster"], "priceRange": [8.99, 34.99] },
+      { "name": "Sausage & Hot Dogs", "brands": ["Johnsonville", "Nathan's", "Hebrew National", "Hillshire Farm", "GreenWise"], "priceRange": [3.49, 9.99] },
+      { "name": "Lamb", "brands": ["GreenWise", "Australian Lamb", "Colorado Lamb", "Niman Ranch", "Strauss"], "priceRange": [7.99, 24.99] },
+      { "name": "Ground Meat", "brands": ["GreenWise", "Laura's Lean", "Perdue", "Organic Prairie", "Niman Ranch"], "priceRange": [4.99, 12.99] }
+    ]
+  },
+  {
+    "name": "Deli",
+    "slug": "deli",
+    "subcategories": [
+      { "name": "Sliced Meats", "brands": ["Boar's Head", "Dietz & Watson", "Applegate", "GreenWise", "Hillshire Farm"], "priceRange": [5.99, 14.99] },
+      { "name": "Cheese", "brands": ["Boar's Head", "Sargento", "Tillamook", "Cabot", "GreenWise"], "priceRange": [3.99, 12.99] },
+      { "name": "Prepared Meals", "brands": ["Publix Deli", "GreenWise", "Hormel", "Bob Evans", "Stouffer's"], "priceRange": [5.99, 14.99] },
+      { "name": "Sandwiches", "brands": ["Publix Deli", "GreenWise", "Oscar Mayer", "Hillshire Farm", "Hormel"], "priceRange": [4.99, 9.99] },
+      { "name": "Deli Salads", "brands": ["Publix Deli", "Reser's", "GreenWise", "Sabra", "Bob Evans"], "priceRange": [3.49, 8.99] },
+      { "name": "Soups", "brands": ["Publix Deli", "Panera Bread", "GreenWise", "Progresso", "Campbell's Fresh"], "priceRange": [3.99, 7.99] },
+      { "name": "Hummus & Dips", "brands": ["Sabra", "GreenWise", "Cedar's", "Tribe", "Ithaca Hummus"], "priceRange": [2.99, 7.99] },
+      { "name": "Olives & Pickles", "brands": ["GreenWise", "DeLallo", "Mezzetta", "Claussen", "Mt. Olive"], "priceRange": [2.49, 8.99] },
+      { "name": "Rotisserie & Hot Foods", "brands": ["Publix Deli", "GreenWise", "Perdue", "Tyson", "Pilgrim's"], "priceRange": [6.99, 12.99] },
+      { "name": "Party Platters", "brands": ["Publix Deli", "Boar's Head", "GreenWise", "Dietz & Watson", "Columbus"], "priceRange": [14.99, 49.99] }
+    ]
+  }
+]
