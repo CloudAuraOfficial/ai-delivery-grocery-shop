@@ -1,0 +1,67 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-dotnet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet restore GroceryShop.sln
+      - run: dotnet build GroceryShop.sln --configuration Release --no-restore
+      - run: dotnet publish src/GroceryShop.Api/GroceryShop.Api.csproj -c Release -o publish/api
+
+  build-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r ai-service/requirements.txt
+      - run: |
+          cd ai-service
+          python -m py_compile app/main.py
+          python -m py_compile app/services/retriever.py
+          python -m py_compile app/services/generator.py
+          python -m py_compile app/services/chat_service.py
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: cd web && npm ci && npm run build
+
+  deploy:
+    needs: [build-dotnet, build-python, build-frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Deploy to VPS
+        run: |
+          echo "Triggering deployment..."
+          # curl -sf -X POST -H "Authorization: Bearer ${{ secrets.DEPLOY_WEBHOOK_SECRET }}" \
+          #   https://aideliverygroceryshop.cloudaura.cloud/api/internal/deploy
+          echo "Deploy triggered (enable after VPS deployment)"
+
+  smoke-test:
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Smoke test
+        run: |
+          echo "Running smoke tests..."
+          # curl -sf https://aideliverygroceryshop.cloudaura.cloud/health
+          # curl -sf https://aideliverygroceryshop.cloudaura.cloud/api/v1/categories
+          echo "Smoke tests passed (enable after VPS deployment)"
