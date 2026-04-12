@@ -1,42 +1,70 @@
+using GroceryShop.Api.Middleware;
+using GroceryShop.Core.Interfaces;
+using GroceryShop.Infrastructure.Data;
+using GroceryShop.Infrastructure.Seed;
+using GroceryShop.Infrastructure.Services;
+using Microsoft.EntityFrameworkCore;
+using Prometheus;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// Configuration from environment variables
+var pgHost = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost";
+var pgPort = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5436";
+var pgDb = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "groceryshop";
+var pgUser = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "grocery";
+var pgPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "changeme";
+var connectionString = $"Host={pgHost};Port={pgPort};Database={pgDb};Username={pgUser};Password={pgPass}";
+
+var allowedOrigins = Environment.GetEnvironmentVariable("CORS_ORIGINS")
+    ?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? [];
+
+// EF Core + PostgreSQL
+builder.Services.AddDbContext<GroceryDbContext>(options =>
+{
+    options.UseNpgsql(connectionString);
+});
+
+// Services
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<SeedDataService>();
+
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        if (allowedOrigins.Length > 0)
+            policy.WithOrigins(allowedOrigins);
+        else
+            policy.AllowAnyOrigin();
+
+        policy.AllowAnyHeader().AllowAnyMethod();
+    });
+});
+
+builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Seed database on startup
+using (var scope = app.Services.CreateScope())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    var seeder = scope.ServiceProvider.GetRequiredService<SeedDataService>();
+    await seeder.SeedAsync();
 }
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+// Middleware pipeline
+app.UseMiddleware<ExceptionHandlerMiddleware>();
+app.UseCors();
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+app.UseSwagger();
+app.UseSwaggerUI();
+
+app.MapControllers();
+app.MapMetrics();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
