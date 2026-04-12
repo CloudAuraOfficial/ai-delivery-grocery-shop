@@ -5,6 +5,7 @@ using GroceryShop.Infrastructure.Seed;
 using GroceryShop.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Prometheus;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,9 @@ var pgUser = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "grocery";
 var pgPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "changeme";
 var connectionString = $"Host={pgHost};Port={pgPort};Database={pgDb};Username={pgUser};Password={pgPass}";
 
+var redisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? "localhost";
+var redisPort = Environment.GetEnvironmentVariable("REDIS_PORT") ?? "6380";
+
 var allowedOrigins = Environment.GetEnvironmentVariable("CORS_ORIGINS")
     ?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? [];
 
@@ -25,9 +29,17 @@ builder.Services.AddDbContext<GroceryDbContext>(options =>
     options.UseNpgsql(connectionString);
 });
 
+// Redis
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect($"{redisHost}:{redisPort},abortConnect=false"));
+
 // Services
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IDealService, DealService>();
+builder.Services.AddScoped<IStoreService, StoreService>();
+builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<SeedDataService>();
 
 // CORS
