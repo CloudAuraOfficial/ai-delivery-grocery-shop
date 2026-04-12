@@ -4,6 +4,8 @@ using GroceryShop.Infrastructure.Data;
 using GroceryShop.Infrastructure.Seed;
 using GroceryShop.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Prometheus;
 using StackExchange.Redis;
 
@@ -55,6 +57,26 @@ builder.Services.AddCors(options =>
         policy.AllowAnyHeader().AllowAnyMethod();
     });
 });
+
+// OpenTelemetry
+var otelEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService("grocery-api"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddEntityFrameworkCoreInstrumentation();
+
+        if (!string.IsNullOrEmpty(otelEndpoint))
+            tracing.AddOtlpExporter(o => o.Endpoint = new Uri(otelEndpoint));
+    });
+
+// Application Insights (no-op when connection string not set)
+var appInsightsCs = Environment.GetEnvironmentVariable("APPLICATIONINSIGHTS_CONNECTION_STRING");
+if (!string.IsNullOrEmpty(appInsightsCs))
+    builder.Services.AddApplicationInsightsTelemetry(o => o.ConnectionString = appInsightsCs);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
