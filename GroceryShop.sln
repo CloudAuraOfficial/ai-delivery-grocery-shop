@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GroceryShop.Infrastructure"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GroceryShop.Api", "src\GroceryShop.Api\GroceryShop.Api.csproj", "{AFB7E345-F553-4A49-BF85-0884B056EB88}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GroceryShop.Functions", "src\GroceryShop.Functions\GroceryShop.Functions.csproj", "{4CFE5C03-25F4-4BE2-99BC-DA4654800130}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,10 +34,15 @@ Global
 		{AFB7E345-F553-4A49-BF85-0884B056EB88}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AFB7E345-F553-4A49-BF85-0884B056EB88}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AFB7E345-F553-4A49-BF85-0884B056EB88}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4CFE5C03-25F4-4BE2-99BC-DA4654800130}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4CFE5C03-25F4-4BE2-99BC-DA4654800130}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4CFE5C03-25F4-4BE2-99BC-DA4654800130}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4CFE5C03-25F4-4BE2-99BC-DA4654800130}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{B9BEF4E6-109D-4A90-9887-58DB01BCF8D9} = {D67AF030-6B9A-4B2C-9437-1BA4EB6A9320}
 		{F33251B6-DB16-4B97-A6CE-107E473BFDD4} = {D67AF030-6B9A-4B2C-9437-1BA4EB6A9320}
 		{AFB7E345-F553-4A49-BF85-0884B056EB88} = {D67AF030-6B9A-4B2C-9437-1BA4EB6A9320}
+		{4CFE5C03-25F4-4BE2-99BC-DA4654800130} = {D67AF030-6B9A-4B2C-9437-1BA4EB6A9320}
 	EndGlobalSection
 EndGlobal
