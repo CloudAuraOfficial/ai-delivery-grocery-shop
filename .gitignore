@@ -1,0 +1,85 @@
+# ═══════════════════════════════════
+# Environment & Secrets
+# ═══════════════════════════════════
+.env
+.env.*
+!.env.example
+*.pfx
+*.key
+*.pem
+
+# ═══════════════════════════════════
+# .NET / C#
+# ═══════════════════════════════════
+bin/
+obj/
+*.user
+*.suo
+*.vs/
+*.DotSettings
+**/Properties/launchSettings.json
+*.csproj.user
+
+# ═══════════════════════════════════
+# Python
+# ═══════════════════════════════════
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+.venv/
+venv/
+*.egg
+
+# ═══════════════════════════════════
+# Node / Next.js
+# ═══════════════════════════════════
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+
+# ═══════════════════════════════════
+# Azure Functions
+# ═══════════════════════════════════
+local.settings.json
+azurite/
+
+# ═══════════════════════════════════
+# Terraform
+# ═══════════════════════════════════
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+
+# ═══════════════════════════════════
+# Docker
+# ═══════════════════════════════════
+docker-compose.override.yml
+
+# ═══════════════════════════════════
+# IDE
+# ═══════════════════════════════════
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ═══════════════════════════════════
+# OS
+# ═══════════════════════════════════
+.DS_Store
+Thumbs.db
+
+# ═══════════════════════════════════
+# Data Pipeline Output
+# ═══════════════════════════════════
+data-pipeline/output/
+data-pipeline/*.json
+!data-pipeline/templates/*.json
