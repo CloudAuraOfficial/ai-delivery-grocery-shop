@@ -70,13 +70,17 @@ services:
       - "127.0.0.1:8021:8000"
     env_file: .env
     environment:
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://172.17.0.1:11434}
-      - QDRANT_URL=${QDRANT_URL:-http://172.17.0.1:6333}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama-shared:11434}
+      - QDRANT_URL=${QDRANT_URL:-http://n8n-qdrant:6333}
       - POSTGRES_HOST=grocery-db
       - POSTGRES_PORT=5432
       - REDIS_HOST=grocery-redis
       - REDIS_PORT=6379
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://172.17.0.1:4317}
+    networks:
+      - default
+      - ollama-net
+      - n8n_default
     depends_on:
       grocery-db:
         condition: service_healthy
@@ -119,6 +123,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
+networks:
+  default:
+  ollama-net:
+    external: true
+  n8n_default:
+    external: true
 
 volumes:
   grocery_pgdata:
