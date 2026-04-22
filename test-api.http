@@ -1,0 +1,407 @@
+### ============================================================
+### AI DELIVERY GROCERY SHOP — API Test Suite
+### Open this file in VS Code with the REST Client extension
+### Click "Send Request" above any request to execute it
+### ============================================================
+
+
+### ─── HEALTH CHECKS ─────────────────────────────────────────
+
+### 1. .NET API Health (checks PostgreSQL connection)
+### File: src/GroceryShop.Api/Controllers/HealthController.cs
+### Flow: HealthController.Health() → _db.Database.CanConnectAsync()
+### Exception: catches Exception, returns 503 with "unhealthy"
+GET http://localhost:8020/health
+
+###
+
+### 2. AI Service Health (checks Qdrant + Ollama + collections)
+### File: ai-service/app/routers/health.py
+GET http://localhost:8021/health
+
+
+### ─── CATEGORIES ─────────────────────────────────────────────
+
+### 3. Get all categories
+### File: src/GroceryShop.Api/Controllers/CategoriesController.cs
+### Flow: CategoriesController.GetAll()
+###   → ICategoryService.GetAllCategoriesAsync()
+###   → CategoryService (Infrastructure) queries DbContext
+###   → EF Core LINQ: .Where(c => c.IsActive).OrderBy(c => c.DisplayOrder)
+###   → Returns CategoryDto records with ProductCount
+GET http://localhost:8020/api/v1/categories
+
+###
+
+### 4. Get category by slug (with product count)
+GET http://localhost:8020/api/v1/categories/fresh
+
+
+### ─── PRODUCTS ───────────────────────────────────────────────
+
+### 5. Get all products (paginated, default page 1, size 20)
+### File: src/GroceryShop.Api/Controllers/ProductsController.cs
+### Flow: ProductsController.GetAll()
+###   → IProductService.GetProductsAsync(page, pageSize, filters...)
+###   → ProductService builds LINQ query with dynamic filters
+###   → .Where(p => p.IsAvailable) ← soft-deleted products excluded
+###   → .Skip((page-1)*pageSize).Take(pageSize)
+###   → Returns PagedResult<ProductDto> with TotalCount, HasNextPage
+GET http://localhost:8020/api/v1/products?page=1&pageSize=5
+
+###
+
+### 6. Filter: organic products only
+GET http://localhost:8020/api/v1/products?isOrganic=true&pageSize=5
+
+###
+
+### 7. Filter: products by category
+### Copy a categoryId from response #3 and paste here
+GET http://localhost:8020/api/v1/products?categoryId=PASTE_CATEGORY_ID_HERE&pageSize=5
+
+###
+
+### 8. Filter: products with active deals only
+### Flow: .Where(p => p.Deals.Any(d => d.IsActive && d.EndDate > DateTime.UtcNow))
+GET http://localhost:8020/api/v1/products?dealsOnly=true&pageSize=5
+
+###
+
+### 9. Sort by price ascending
+GET http://localhost:8020/api/v1/products?sortBy=price_asc&pageSize=5
+
+###
+
+### 10. Sort by price descending
+GET http://localhost:8020/api/v1/products?sortBy=price_desc&pageSize=5
+
+###
+
+### 11. Search products by keyword
+### File: ProductService.SearchProductsAsync()
+### Flow: searches Name, Description, Brand, Tags — all case-insensitive
+###   .Where(p => p.IsAvailable && (p.Name.ToLower().Contains(q) || ...))
+GET http://localhost:8020/api/v1/products/search?q=organic%20apple&pageSize=5
+
+###
+
+### 12. Get products by category slug
+GET http://localhost:8020/api/v1/products/by-category/beverages?pageSize=5
+
+###
+
+### 13. Get single product by ID (copy an ID from any response above)
+GET http://localhost:8020/api/v1/products/PASTE_PRODUCT_ID_HERE
+
+
+### ─── DEALS ─────────────────────────────────────────────────
+
+### 14. Get all active deals (paginated)
+### File: src/GroceryShop.Api/Controllers/DealsController.cs
+### Flow: DealService.GetDealsAsync()
+###   → .Where(d => d.IsActive && d.EndDate > DateTime.UtcNow)
+GET http://localhost:8020/api/v1/deals?pageSize=5
+
+###
+
+### 15. Get BOGO deals only
+GET http://localhost:8020/api/v1/deals/bogo
+
+###
+
+### 16. Get weekly deals
+GET http://localhost:8020/api/v1/deals/weekly
+
+###
+
+### 17. Get daily deals
+GET http://localhost:8020/api/v1/deals/daily
+
+
+### ─── STORES ─────────────────────────────────────────────────
+
+### 18. Get all stores
+### File: src/GroceryShop.Api/Controllers/StoresController.cs
+### Flow: StoreService.GetAllStoresAsync()
+###   → Includes Hours navigation property
+###   → Formats TimeOnly as "7:00 AM" / "10:00 PM"
+GET http://localhost:8020/api/v1/stores
+
+###
+
+### 19. Get nearby stores (Lakeland coordinates)
+### Flow: StoreService.GetNearbyStoresAsync()
+###   → Simple Manhattan distance: |lat1-lat2| + |lng1-lng2|
+###   → Sorted closest first
+GET http://localhost:8020/api/v1/stores/nearby?lat=28.0096&lng=-81.9568
+
+
+### ─── SHOPPING CART (Redis-backed) ──────────────────────────
+
+### 20. Get cart (empty initially)
+### File: src/GroceryShop.Api/Controllers/CartController.cs
+### Flow: CartController.GetCart()
+###   → reads X-Session-Id header → CartService.GetCartAsync(sessionId)
+###   → Redis GET "cart:{sessionId}" → deserialize JSON
+###   → If empty → returns CartDto with zeros
+### DB: Redis (not PostgreSQL)
+GET http://localhost:8020/api/v1/cart
+X-Session-Id: test-session-roger
+
+###
+
+### 21. Add item to cart
+### Flow: CartService.AddItemAsync()
+###   → Redis GET → deserialize → add/increment → Redis SET (24h TTL)
+###   → BuildCartDtoAsync(): fetch Product from PostgreSQL
+###   → Calculate: lineTotal, subTotal, tax (7%), deliveryFee ($0 if >$35, else $5.99)
+### Copy a real product ID from response #5
+POST http://localhost:8020/api/v1/cart/items
+Content-Type: application/json
+X-Session-Id: test-session-roger
+
+{
+    "productId": "PASTE_PRODUCT_ID_HERE",
+    "quantity": 3
+}
+
+###
+
+### 22. Update item quantity
+PUT http://localhost:8020/api/v1/cart/items/PASTE_PRODUCT_ID_HERE
+Content-Type: application/json
+X-Session-Id: test-session-roger
+
+{
+    "quantity": 1
+}
+
+###
+
+### 23. Remove item from cart
+DELETE http://localhost:8020/api/v1/cart/items/PASTE_PRODUCT_ID_HERE
+X-Session-Id: test-session-roger
+
+###
+
+### 24. Clear entire cart
+### Flow: Redis DELETE "cart:{sessionId}"
+DELETE http://localhost:8020/api/v1/cart
+X-Session-Id: test-session-roger
+
+
+### ─── ORDERS ─────────────────────────────────────────────────
+
+### 25. Get Roger's orders
+### File: src/GroceryShop.Api/Controllers/OrdersController.cs
+### Flow: OrdersController.GetAll()
+###   → reads X-User-Id header → OrderService.GetOrdersAsync(userId, page, pageSize)
+###   → .Where(o => o.UserId == userId).OrderByDescending(o => o.CreatedAt)
+### Copy Roger's user ID from the database query we ran earlier
+GET http://localhost:8020/api/v1/orders
+X-User-Id: dcfad6ae-634c-4449-95ff-985da7b71844
+
+###
+
+### 26. Create order from cart
+### Flow: OrderService.CreateOrderAsync()
+###   → CartService.GetCartAsync(sessionId) — reads from Redis
+###   → If cart empty → throws InvalidOperationException
+###   → Generates order number: "ORD-{date}-{4-char-guid}"
+###   → Sets EstimatedDelivery = now + 45 minutes
+###   → _db.Orders.Add(order) + SaveChangesAsync() — writes PostgreSQL
+###   → CartService.ClearCartAsync(sessionId) — deletes Redis key
+###   ⚠️ NO TRANSACTION: crash between save and clear = double order risk
+### IMPORTANT: Add items to cart first (request #21), then run this
+POST http://localhost:8020/api/v1/orders
+Content-Type: application/json
+X-Session-Id: test-session-roger
+X-User-Id: dcfad6ae-634c-4449-95ff-985da7b71844
+
+{
+    "storeId": "PASTE_STORE_ID_HERE",
+    "deliveryAddress": "3501 S Florida Ave, Lakeland FL 33803",
+    "notes": "Ring doorbell please"
+}
+
+###
+
+### 27. Update order status (copy order ID from response #26)
+PATCH http://localhost:8020/api/v1/orders/PASTE_ORDER_ID_HERE/status
+Content-Type: application/json
+
+{
+    "status": 1
+}
+
+
+### ─── AI CHATBOT ─────────────────────────────────────────────
+
+### 28. Chat: product search (full RAG pipeline)
+### File: ai-service/app/routers/chat.py → chat_message()
+### Flow:
+###   1. check_custom_scenario() → None (not a special case)
+###   2. get_or_create_session(null) → Redis SET "chat:{uuid}", TTL 2hr
+###   3. get_history(session_id) → Redis GET → empty (first msg)
+###   4. classify_intent("organic fruit") → "product_search"
+###   5. get_embedding(query) → Ollama POST /api/embeddings → 768-dim vector
+###   6. retrieve_products(query, top_k=10) → Qdrant.search("grocery_products")
+###      detect_category_filter("organic fruit") → "Fresh" → metadata filter
+###   7. retrieve_deals(query, top_k=3) → Qdrant.search("grocery_deals")
+###   8. build_context(products, deals, stores) → text block
+###   9. build_messages(query, context, history) → [system, user]
+###  10. generate(query, context, history) → Ollama/Azure LLM → response
+###  11. append_message(session_id, "user", query) → Redis
+###  12. append_message(session_id, "assistant", response) → Redis
+###  13. persist_message(...) → PostgreSQL ChatMessages + ChatSessions
+###      Includes: LatencyMs, Model, RetrievedProductIds
+### Exception: ExceptionHandlerMiddleware catches unhandled → 500 JSON
+POST http://localhost:8021/api/chat
+Content-Type: application/json
+
+{
+    "message": "What organic fruit do you have under 5 dollars?",
+    "session_id": null
+}
+
+###
+
+### 29. Chat: follow-up (uses session for continuity)
+### Copy session_id from response #28 and paste below
+### Flow: same as above but step 3 returns previous messages from Redis
+###   → history is injected into LLM prompt for context continuity
+POST http://localhost:8021/api/chat
+Content-Type: application/json
+
+{
+    "message": "Any of those on BOGO?",
+    "session_id": "PASTE_SESSION_ID_FROM_28"
+}
+
+###
+
+### 30. Chat: deal inquiry (different intent → different retrieval)
+### classify_intent detects "deal" keyword → "deal_inquiry"
+### Retrieval: 8 deals + 5 products (vs 10 products + 3 deals for product_search)
+POST http://localhost:8021/api/chat
+Content-Type: application/json
+
+{
+    "message": "What BOGO deals do you have on meat?",
+    "session_id": null
+}
+
+###
+
+### 31. Chat: store inquiry
+### classify_intent detects "store"/"hours" → "store_info"
+### Retrieval: 5 stores + 3 products (Qdrant "grocery_stores" collection)
+POST http://localhost:8021/api/chat
+Content-Type: application/json
+
+{
+    "message": "What are the hours for the Lakeland South store?",
+    "session_id": null
+}
+
+###
+
+### 32. Chat: custom scenario — order tracking (skips RAG entirely)
+### File: ai-service/app/services/custom_responses.py
+### Flow: check_custom_scenario("track my order") → { skip_rag: true }
+###   → Returns canned response, NO embedding, NO Qdrant, NO LLM
+###   → Still persisted to Redis + PostgreSQL
+POST http://localhost:8021/api/chat
+Content-Type: application/json
+
+{
+    "message": "Where is my order? Can you track it?",
+    "session_id": null
+}
+
+###
+
+### 33. Chat: custom scenario — brand not carried (RAG continues)
+### Flow: check_custom_scenario("kirkland") → { skip_rag: false }
+###   → Prepends apology, then runs full RAG for alternatives
+POST http://localhost:8021/api/chat
+Content-Type: application/json
+
+{
+    "message": "Do you carry Kirkland water?",
+    "session_id": null
+}
+
+###
+
+### 34. Chat: off-topic (skips RAG)
+POST http://localhost:8021/api/chat
+Content-Type: application/json
+
+{
+    "message": "What's the weather like today?",
+    "session_id": null
+}
+
+###
+
+### 35. Chat: dietary restriction (RAG continues)
+POST http://localhost:8021/api/chat
+Content-Type: application/json
+
+{
+    "message": "I need gluten-free bread options",
+    "session_id": null
+}
+
+###
+
+### 36. Chat: streaming (SSE token-by-token)
+### File: ai-service/app/routers/chat.py → chat_stream()
+### Flow: same retrieval, but generator.generate_stream() yields tokens
+### Response: text/event-stream with "data: {token}\n\n" per chunk
+### NOTE: REST Client will show raw SSE events
+POST http://localhost:8021/api/chat/stream
+Content-Type: application/json
+
+{
+    "message": "Suggest a quick weeknight dinner with ingredients under 20 dollars",
+    "session_id": null
+}
+
+###
+
+### 37. Get chat history for a session
+### Copy session_id from any chat response above
+GET http://localhost:8021/api/chat/sessions/PASTE_SESSION_ID/history
+
+
+### ─── VERIFY DATABASE WRITES ────────────────────────────────
+
+### 38. Swagger UI — browse all .NET API endpoints
+### Open in browser: http://localhost:8020/swagger
+
+### 39. Swagger UI — browse all AI Service endpoints
+### Open in browser: http://localhost:8021/docs
+
+
+### ─── EXCEPTION HANDLING FLOW ───────────────────────────────
+
+### 40. Test: search with empty query (validation error)
+### File: ProductsController.cs line 39
+### Flow: if (string.IsNullOrWhiteSpace(q)) return BadRequest(...)
+### Returns: { error: "ValidationError", message: "...", statusCode: 400 }
+GET http://localhost:8020/api/v1/products/search?q=
+
+###
+
+### 41. Test: get non-existent product (404)
+### Flow: ProductService.GetProductByIdAsync() returns null
+###   → Controller: product == null ? NotFound() : Ok(product)
+GET http://localhost:8020/api/v1/products/00000000-0000-0000-0000-000000000000
+
+###
+
+### 42. Test: get non-existent order (404)
+GET http://localhost:8020/api/v1/orders/00000000-0000-0000-0000-000000000000
