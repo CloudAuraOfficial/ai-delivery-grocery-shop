@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import chat, health, embeddings, metrics
+from app.routers import chat, health, embeddings, metrics, staff_chat
 
 structlog.configure(
     processors=[
@@ -34,6 +34,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(chat.router, prefix="/api")
 app.include_router(embeddings.router, prefix="/api")
+app.include_router(staff_chat.router, prefix="/api")
 app.include_router(metrics.router)
 
 # OpenTelemetry (after app creation)
