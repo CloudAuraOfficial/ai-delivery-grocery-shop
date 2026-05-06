@@ -25,6 +25,8 @@ async def chat_message(request: Request, body: ChatRequest):
     # Input guard: length cap + injection-pattern filter
     guard = guard_check(body.message)
     if not guard.ok:
+        from app.routers.metrics import INPUT_GUARD_BLOCKS
+        INPUT_GUARD_BLOCKS.labels(reason=guard.reason).inc()
         logger.warning("chat_input_blocked", session=session_id[:8], reason=guard.reason)
         return ChatResponse(
             message=REJECTION_MESSAGE,

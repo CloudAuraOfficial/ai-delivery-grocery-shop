@@ -50,10 +50,13 @@ async def get_or_create_session(session_id: str | None) -> str:
 
 async def get_history(session_id: str) -> list[dict]:
     """Get conversation history from Redis."""
+    from app.routers.metrics import SESSION_CACHE
     r = await get_redis()
     data = await r.get(f"chat:{session_id}")
     if not data:
+        SESSION_CACHE.labels(outcome="miss").inc()
         return []
+    SESSION_CACHE.labels(outcome="hit").inc()
     session = json.loads(data)
     return session.get("messages", [])
 

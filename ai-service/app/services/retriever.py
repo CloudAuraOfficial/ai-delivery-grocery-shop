@@ -1,5 +1,9 @@
-"""Qdrant hybrid retriever with metadata filtering."""
+"""Hybrid retriever: Qdrant dense vectors + Postgres FTS/trigram, fused via RRF."""
 
+import asyncio
+
+import psycopg2
+import psycopg2.extras
 import structlog
 from qdrant_client import QdrantClient
 from qdrant_client.models import Filter, FieldCondition, MatchValue
@@ -11,12 +15,90 @@ logger = structlog.get_logger()
 
 _qdrant: QdrantClient | None = None
 
+RRF_K = 60  # standard RRF constant; higher = flatter weighting
+
 
 def get_qdrant() -> QdrantClient:
     global _qdrant
     if _qdrant is None:
         _qdrant = QdrantClient(url=settings.QDRANT_URL)
     return _qdrant
+
+
+def _pg_conn():
+    return psycopg2.connect(settings.postgres_dsn)
+
+
+def _keyword_search_products(query: str, top_k: int, category: str | None) -> list[dict]:
+    """BM25-equivalent retrieval via Postgres FTS + trigram similarity on Name."""
+    sql = """
+        SELECT p."Sku", p."Name", p."Brand", p."Price", p."Unit",
+               p."IsOrganic", p."IsStoreBrand", p."Tags",
+               c."Name" AS category, c."Slug" AS category_slug,
+               (
+                 0.7 * COALESCE(ts_rank(
+                   to_tsvector('english', p."Name" || ' ' || COALESCE(p."Description",'') || ' ' || COALESCE(p."Tags",'')),
+                   plainto_tsquery('english', %(q)s)
+                 ), 0)
+                 +
+                 0.3 * similarity(p."Name", %(q)s)
+               ) AS score
+        FROM "Products" p
+        JOIN "Categories" c ON c."Id" = p."CategoryId"
+        WHERE p."IsAvailable" = TRUE
+          AND (
+            to_tsvector('english', p."Name" || ' ' || COALESCE(p."Description",'') || ' ' || COALESCE(p."Tags",''))
+              @@ plainto_tsquery('english', %(q)s)
+            OR similarity(p."Name", %(q)s) > 0.15
+          )
+          AND (%(cat)s IS NULL OR c."Name" = %(cat)s)
+        ORDER BY score DESC
+        LIMIT %(k)s
+    """
+    try:
+        with _pg_conn() as conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(sql, {"q": query, "cat": category, "k": top_k})
+            rows = cur.fetchall()
+    except Exception as exc:
+        logger.warning("keyword_search_failed", error=str(exc))
+        return []
+
+    return [
+        {
+            "sku": r["Sku"],
+            "name": r["Name"],
+            "brand": r["Brand"] or "",
+            "price": float(r["Price"]),
+            "unit": r["Unit"],
+            "is_organic": r.get("IsOrganic", False),
+            "is_store_brand": r.get("IsStoreBrand", False),
+            "tags": r["Tags"] or "",
+            "category": r["category"],
+            "subcategory": "",
+            "score": float(r["score"]),
+        }
+        for r in rows
+    ]
+
+
+def _rrf_fuse(rankings: list[list[dict]], top_k: int) -> list[dict]:
+    """Reciprocal Rank Fusion across ordered ranking lists, keyed by sku."""
+    scores: dict[str, float] = {}
+    seen: dict[str, dict] = {}
+    for ranking in rankings:
+        for rank, item in enumerate(ranking):
+            sku = item.get("sku")
+            if not sku:
+                continue
+            scores[sku] = scores.get(sku, 0.0) + 1.0 / (RRF_K + rank + 1)
+            if sku not in seen:
+                seen[sku] = item
+    fused = sorted(
+        ({**seen[sku], "rrf_score": s} for sku, s in scores.items()),
+        key=lambda x: x["rrf_score"],
+        reverse=True,
+    )
+    return fused[:top_k]
 
 
 def classify_intent(query: str) -> str:
@@ -71,26 +153,19 @@ def detect_deal_filter(query: str) -> str | None:
     return None
 
 
-async def retrieve_products(query: str, top_k: int = 10) -> list[dict]:
-    """Retrieve relevant products from Qdrant."""
+async def _vector_search_products(query: str, top_k: int, category: str | None) -> list[dict]:
     embedding = await get_embedding(query)
     qdrant = get_qdrant()
-
-    # Build filter
-    category = detect_category_filter(query)
-    filters = None
-    if category:
-        filters = Filter(
-            must=[FieldCondition(key="category", match=MatchValue(value=category))]
-        )
-
+    filters = (
+        Filter(must=[FieldCondition(key="category", match=MatchValue(value=category))])
+        if category else None
+    )
     results = qdrant.search(
         collection_name="grocery_products",
         query_vector=embedding,
         limit=top_k,
         query_filter=filters,
     )
-
     products = []
     for r in results:
         payload = r.payload or {}
@@ -108,9 +183,44 @@ async def retrieve_products(query: str, top_k: int = 10) -> list[dict]:
             "tags": payload.get("tags", ""),
             "score": r.score,
         })
-
-    logger.info("product_retrieval", query=query[:50], category_filter=category, results=len(products))
     return products
+
+
+async def retrieve_products(query: str, top_k: int = 10) -> list[dict]:
+    """Hybrid retrieval: vector + keyword, fused via RRF."""
+    import time
+    from app.routers.metrics import RAG_RETRIEVAL_LATENCY
+
+    category = detect_category_filter(query)
+    pool_k = max(top_k * 3, 20)  # over-fetch from each lane to give RRF room
+
+    fused_start = time.time()
+
+    async def timed_vector():
+        s = time.time()
+        out = await _vector_search_products(query, pool_k, category)
+        RAG_RETRIEVAL_LATENCY.labels(lane="vector").observe(time.time() - s)
+        return out
+
+    async def timed_keyword():
+        s = time.time()
+        out = await asyncio.to_thread(_keyword_search_products, query, pool_k, category)
+        RAG_RETRIEVAL_LATENCY.labels(lane="keyword").observe(time.time() - s)
+        return out
+
+    vector_results, keyword_results = await asyncio.gather(timed_vector(), timed_keyword())
+    fused = _rrf_fuse([vector_results, keyword_results], top_k)
+    RAG_RETRIEVAL_LATENCY.labels(lane="fused").observe(time.time() - fused_start)
+
+    logger.info(
+        "product_retrieval",
+        query=query[:50],
+        category_filter=category,
+        vector=len(vector_results),
+        keyword=len(keyword_results),
+        fused=len(fused),
+    )
+    return fused
 
 
 async def retrieve_deals(query: str, top_k: int = 10) -> list[dict]:

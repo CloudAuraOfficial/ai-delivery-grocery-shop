@@ -125,6 +125,8 @@ async def generate(
     messages = build_messages(user_message, context, history)
     start = time.time()
 
+    from app.routers.metrics import LLM_LATENCY
+
     try:
         async for attempt in AsyncRetrying(**_retry_policy):
             with attempt:
@@ -134,10 +136,12 @@ async def generate(
                     response, model = await _generate_ollama(messages)
     except (RetryError, httpx.HTTPError) as exc:
         latency = (time.time() - start) * 1000
+        LLM_LATENCY.labels(model=settings.AZURE_OPENAI_CHAT_DEPLOYMENT, outcome="fallback").observe(latency / 1000.0)
         logger.error("llm_generation_failed", error=str(exc), latency_ms=round(latency, 1))
         return FALLBACK_MESSAGE, latency, "fallback"
 
     latency = (time.time() - start) * 1000
+    LLM_LATENCY.labels(model=model, outcome="ok").observe(latency / 1000.0)
     logger.info("llm_generation", model=model, latency_ms=round(latency, 1), input_tokens=len(str(messages)))
 
     return response, latency, model
@@ -190,6 +194,8 @@ async def _stream_ollama(messages: list[dict]) -> AsyncGenerator[str, None]:
 
 async def _generate_azure(messages: list[dict]) -> tuple[str, str]:
     """Generate via Azure OpenAI."""
+    from app.routers.metrics import LLM_TOKENS
+
     url = f"{settings.AZURE_OPENAI_ENDPOINT}/openai/deployments/{settings.AZURE_OPENAI_CHAT_DEPLOYMENT}/chat/completions?api-version=2024-02-01"
     async with httpx.AsyncClient() as client:
         resp = await client.post(
@@ -200,7 +206,13 @@ async def _generate_azure(messages: list[dict]) -> tuple[str, str]:
         )
         resp.raise_for_status()
         data = resp.json()
-        return data["choices"][0]["message"]["content"], settings.AZURE_OPENAI_CHAT_DEPLOYMENT
+    model = settings.AZURE_OPENAI_CHAT_DEPLOYMENT
+    usage = data.get("usage") or {}
+    if usage:
+        LLM_TOKENS.labels(model=model, kind="prompt").inc(usage.get("prompt_tokens", 0))
+        LLM_TOKENS.labels(model=model, kind="completion").inc(usage.get("completion_tokens", 0))
+        LLM_TOKENS.labels(model=model, kind="total").inc(usage.get("total_tokens", 0))
+    return data["choices"][0]["message"]["content"], model
 
 
 async def _stream_azure(messages: list[dict]) -> AsyncGenerator[str, None]:
