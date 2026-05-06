@@ -109,3 +109,31 @@ curl http://localhost:3002                 # Frontend
 - **Plan**: https://cloudaura.cloud/ai-delivery-grocery-shop-plan.html
 - **Explainer**: https://cloudaura.cloud/ai-delivery-grocery-shop-ultra-plan.html
 - **Repo**: https://github.com/CloudAuraOfficial/ai-delivery-grocery-shop
+
+## Infrastructure substitutions (portfolio → enterprise)
+
+This project runs cost-efficiently on a single VPS. Each piece is intentionally
+the portfolio analogue of the enterprise component it would be replaced with at
+production scale. The application code and abstractions are unchanged across
+the swap — only the deployment substrate moves.
+
+| Concern             | Portfolio (here)                          | Enterprise (production target)                                | Why the substitution is honest                                                                 |
+|---------------------|-------------------------------------------|---------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| Edge / DNS / WAF    | Cloudflare DNS + host Nginx + Let's Encrypt | Azure Front Door + WAF policies + Application Gateway        | Same TLS termination + L7 routing surface; loses regional failover, native WAF rules, bot protection in our control plane. |
+| Compute             | Single Docker host, 3 long-running containers | Azure Container Apps (Consumption) with KEDA autoscale       | Container images are unchanged; only the orchestrator differs. Per-service replica count goes from 1 → autoscaled. |
+| Relational DB       | Postgres 16 in container                  | Azure SQL (Hyperscale) **or** Azure DB for PostgreSQL Flexible Server | Dapper + EF Core providers swap with one connection-string change. Loses geo-replication, AAD auth, Always Encrypted, automated backups. |
+| Vector store        | Qdrant (self-hosted)                      | Azure AI Search (vector + BM25 + semantic ranker)            | Qdrant is fast and cheap for pure vector; Azure AI Search adds hybrid retrieval, RBAC, multi-tenant index isolation, private endpoints. The retriever interface in `ai-service/app/services/retriever.py` is the abstraction point. |
+| Embeddings          | Ollama `nomic-embed-text` (local)         | Azure OpenAI `text-embedding-3-large`                         | `EMBEDDING_PROVIDER` env flips between them; same `app.services.embeddings` interface. |
+| LLM                 | Azure OpenAI gpt-4o (already)             | (same)                                                        | Already production-shaped. |
+| Background jobs     | `GroceryShop.Functions` (.NET Isolated)   | Azure Functions Premium / Container Apps Jobs                 | Code is identical; runtime swap only. |
+| Cache / pubsub      | Redis 7 in container                      | Azure Cache for Redis Premium (zone-redundant)                | Same `redis-py` / `StackExchange.Redis` clients. Adds zone redundancy, persistence, private link. |
+| Object storage      | Local + Azurite (dev)                     | Azure Blob Storage (already used in prod path)                | Already production-shaped. |
+| Observability       | OpenTelemetry → App Insights              | (same) + Log Analytics workspace + Azure Monitor alerts       | Already production-shaped; alerting rules are what's missing. |
+| Secrets             | `.env` + Azure Key Vault when `AZURE_KEY_VAULT_URI` set | Azure Key Vault + Managed Identity on every workload | The resolution path in `ai-service/app/secrets.py` already prefers Key Vault when configured; populate the env var on Container Apps and the lookup goes vault-first with no code change. |
+| CI/CD               | GitHub Actions: build only                | GitHub Actions: build → ACR push → Container Apps revision    | The build job is unchanged; the deploy job is the swap. The `deployments/aci-bicep/` template here is one form of that swap. |
+| Multi-tenancy       | None (single brand)                       | Tenant-keyed partitions + RBAC per tenant                     | Deliberately not stubbed in code — adding a `TenantId` column without enforcement is worse than no tenancy code at all. The intended approach: row-level security in Postgres, EF query filter in .NET, Qdrant per-tenant collection prefixes. |
+| Resilience          | tenacity retry + canned fallback (Python), Polly equivalent on .NET roadmap | Same patterns + chaos drills + DLQs                          | Pattern is in `ai-service/app/services/generator.py`; .NET equivalent (Polly pipeline + Circuit Breaker on outbound HTTP) is the next addition. |
+| Rate limiting       | slowapi per-IP on `/api/chat*` (30/min)   | API Management policies + per-tenant quotas + 429 SLOs        | App-layer cap defends against wallet-DoS; APIM moves the policy to the edge and adds per-tenant fairness. |
+| Input safety        | Regex-based prompt-injection guard + length cap | Azure AI Content Safety / Prompt Shields + telemetry on blocks | The interface in `ai-service/app/security/input_guard.py` becomes a thin wrapper around the managed service. |
+
+**What this section is not:** a claim that the portfolio infra is production-ready. It is a map showing that every piece has a known, named, drop-in enterprise equivalent — and that the application code does not need to be rewritten when the substitution happens.

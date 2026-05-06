@@ -2,6 +2,8 @@
 
 import os
 
+from app.secrets import get as get_secret
+
 
 class Settings:
     # Ollama (local)
@@ -13,11 +15,14 @@ class Settings:
     EMBEDDING_PROVIDER: str = os.environ.get("EMBEDDING_PROVIDER", "ollama")
     LLM_PROVIDER: str = os.environ.get("LLM_PROVIDER", "ollama")
 
-    # Azure OpenAI (production)
+    # Azure OpenAI (production) — API key resolves via Key Vault when AZURE_KEY_VAULT_URI is set
     AZURE_OPENAI_ENDPOINT: str = os.environ.get("AZURE_OPENAI_ENDPOINT", "")
-    AZURE_OPENAI_API_KEY: str = os.environ.get("AZURE_OPENAI_API_KEY", "")
     AZURE_OPENAI_EMBEDDING_DEPLOYMENT: str = os.environ.get("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-ada-002")
     AZURE_OPENAI_CHAT_DEPLOYMENT: str = os.environ.get("AZURE_OPENAI_CHAT_DEPLOYMENT", "gpt-4o")
+
+    @property
+    def AZURE_OPENAI_API_KEY(self) -> str:
+        return get_secret("AZURE_OPENAI_API_KEY")
 
     # Qdrant
     QDRANT_URL: str = os.environ.get("QDRANT_URL", "http://localhost:6333")

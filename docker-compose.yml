@@ -104,6 +104,7 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api/v1}
       - NEXT_PUBLIC_CHAT_URL=${NEXT_PUBLIC_CHAT_URL:-/api}
+      - INTERNAL_API_URL=${INTERNAL_API_URL:-http://grocery-api:8000/api/v1}
     depends_on:
       - grocery-api
 

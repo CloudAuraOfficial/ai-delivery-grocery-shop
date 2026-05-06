@@ -14,3 +14,5 @@ prometheus-client==0.21.0
 sentence-transformers==3.1.1
 slowapi==0.1.9
 tenacity==9.0.0
+azure-identity==1.19.0
+azure-keyvault-secrets==4.9.0
