@@ -3,8 +3,12 @@
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.config import settings
+from app.rate_limit import limiter
 from app.routers import chat, health, embeddings, metrics, staff_chat
 
 structlog.configure(
@@ -23,6 +27,10 @@ app = FastAPI(
     description="RAG-powered chatbot for grocery product search, deals, and recommendations",
     version="1.0.0",
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
