@@ -94,8 +94,9 @@ async def retrieve_products(query: str, top_k: int = 10) -> list[dict]:
     products = []
     for r in results:
         payload = r.payload or {}
+        sku = payload.get("sku") or f"qid-{r.id}"
         products.append({
-            "sku": payload.get("sku", ""),
+            "sku": sku,
             "name": payload.get("name", ""),
             "category": payload.get("category", ""),
             "subcategory": payload.get("subcategory", ""),

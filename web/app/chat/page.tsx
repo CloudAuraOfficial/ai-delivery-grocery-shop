@@ -102,9 +102,9 @@ export default function ChatPage() {
           <div>
             <div className="text-xs text-muted mb-2 font-medium">Related products:</div>
             <div className="flex flex-wrap gap-2">
-              {products.map((p) => (
+              {products.map((p, i) => (
                 <Link
-                  key={p.sku}
+                  key={`${p.sku || "nosku"}-${i}`}
                   href={`/products?q=${encodeURIComponent(p.name)}`}
                   className="text-xs bg-white border border-border rounded-lg px-3 py-2.5 flex items-center gap-2 hover:border-primary hover:shadow-md transition-all group cursor-pointer"
                 >
